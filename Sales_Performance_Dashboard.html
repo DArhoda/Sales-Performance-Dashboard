@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Performance Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .chart {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+    }
+    #upload-area {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interactive Sales Performance Dashboard</h1>
+  <div id="upload-area">
+    <input type="file" id="fileInput" accept=".json" />
+    <p>Upload your JSON file to generate the dashboard.</p>
+  </div>
+  <div id="dashboard">
+    <div id="salesByGeography" class="chart"></div>
+    <div id="topSellingProducts" class="chart"></div>
+    <div id="salesOverTime" class="chart"></div>
+    <div id="salesBySalesperson" class="chart"></div>
+    <div id="unitsVsRevenue" class="chart"></div>
+  </div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const jsonData = JSON.parse(e.target.result);
+          generateDashboard(jsonData);
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function generateDashboard(data) {
+      // Process Data
+      const processedData = processData(data);
+
+      // Generate Visualizations
+      generateSalesByGeography(processedData);
+      generateTopSellingProducts(processedData);
+      generateSalesOverTime(processedData);
+      generateSalesBySalesperson(processedData);
+      generateUnitsVsRevenue(processedData);
+    }
+
+    function processData(data) {
+      const processed = {
+        geography: {},
+        products: {},
+        salesOverTime: {},
+        salespeople: {},
+        unitsVsRevenue: []
+      };
+
+      data.forEach((item) => {
+        const region = item.FIELD4.trim();
+        const product = item.FIELD5.trim();
+        const salesperson = item['Data for Power BI Sales Analytics Proejct'].trim();
+        const date = item.FIELD6;
+        const sales = parseFloat(item.FIELD7.replace(/[\$,]/g, ''));
+        const units = parseInt(item.FIELD8);
+
+        // Sales by Geography
+        processed.geography[region] = (processed.geography[region] || 0) + sales;
+
+        // Top-Selling Products
+        processed.products[product] = (processed.products[product] || 0) + sales;
+
+        // Sales Over Time
+        processed.salesOverTime[date] = (processed.salesOverTime[date] || 0) + sales;
+
+        // Sales by Salesperson
+        processed.salespeople[salesperson] = (processed.salespeople[salesperson] || 0) + sales;
+
+        // Units vs Revenue
+        processed.unitsVsRevenue.push({ product, sales, units });
+      });
+
+      return processed;
+    }
+
+    function generateSalesByGeography(data) {
+      const regions = Object.keys(data.geography);
+      const sales = Object.values(data.geography);
+
+      const trace = {
+        x: regions,
+        y: sales,
+        type: 'bar',
+        marker: { color: 'lightblue' }
+      };
+
+      const layout = { title: 'Total Sales by Geography', xaxis: { title: 'Region' }, yaxis: { title: 'Sales' } };
+      Plotly.newPlot('salesByGeography', [trace], layout);
+    }
+
+    function generateTopSellingProducts(data) {
+      const products = Object.keys(data.products).slice(0, 10);
+      const sales = Object.values(data.products).slice(0, 10);
+
+      const trace = {
+        labels: products,
+        values: sales,
+        type: 'pie'
+      };
+
+      const layout = { title: 'Top-Selling Products' };
+      Plotly.newPlot('topSellingProducts', [trace], layout);
+    }
+
+    function generateSalesOverTime(data) {
+      const dates = Object.keys(data.salesOverTime);
+      const sales = Object.values(data.salesOverTime);
+
+      const trace = {
+        x: dates,
+        y: sales,
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: 'green' }
+      };
+
+      const layout = { title: 'Sales Performance Over Time', xaxis: { title: 'Date' }, yaxis: { title: 'Sales' } };
+      Plotly.newPlot('salesOverTime', [trace], layout);
+    }
+
+    function generateSalesBySalesperson(data) {
+      const salespeople = Object.keys(data.salespeople);
+      const sales = Object.values(data.salespeople);
+
+      const trace = {
+        x: salespeople,
+        y: sales,
+        type: 'bar',
+        marker: { color: 'orange' }
+      };
+
+      const layout = { title: 'Sales by Salesperson', xaxis: { title: 'Salesperson' }, yaxis: { title: 'Sales' } };
+      Plotly.newPlot('salesBySalesperson', [trace], layout);
+    }
+
+    function generateUnitsVsRevenue(data) {
+      const products = data.unitsVsRevenue.map((item) => item.product);
+      const sales = data.unitsVsRevenue.map((item) => item.sales);
+      const units = data.unitsVsRevenue.map((item) => item.units);
+
+      const trace = {
+        x: units,
+        y: sales,
+        text: products,
+        mode: 'markers',
+        marker: { size: 10, color: 'purple' }
+      };
+
+      const layout = {
+        title: 'Units Sold vs. Revenue',
+        xaxis: { title: 'Units Sold' },
+        yaxis: { title: 'Revenue' }
+      };
+
+      Plotly.newPlot('unitsVsRevenue', [trace], layout);
+    }
+  </script>
+</body>
+</html>
